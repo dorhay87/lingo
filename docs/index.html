@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light"><head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lingo - a translator so small it's just a shortcut</title>
+<meta name="description" content="Lingo is a tiny, free, open-source translation popup for Windows. One shortcut translates highlighted text anywhere - with dictionary senses, auto-detection, and RTL support. No account, no telemetry, ~3 MB.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Lingo - a translator so small it's just a shortcut">
+<meta property="og:description" content="A tiny, free, open-source translation popup for Windows. One shortcut, instant translation anywhere.">
+<meta property="og:image" content="https://dorhay87.github.io/lingo/promo.png">
+<meta property="og:url" content="https://dorhay87.github.io/lingo/">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Lingo - a translator so small it's just a shortcut">
+<meta name="twitter:description" content="A tiny, free, open-source translation popup for Windows. One shortcut, instant translation anywhere.">
+<meta name="twitter:image" content="https://dorhay87.github.io/lingo/promo.png">
+<meta name="theme-color" content="#FBFBFB">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234F46E5'/%3E%3Ctext x='16' y='22' font-family='Segoe UI,system-ui,sans-serif' font-size='15' font-weight='700' fill='white' text-anchor='middle'%3E%E6%96%87A%3C/text%3E%3C/svg%3E">
+<style>
+  :root{
+    --bg:#FBFBFB; --bg-grid:rgba(0,0,0,.035);
+    --surface:#FFFFFF; --surface-2:#F3F3F3;
+    --text:rgba(0,0,0,.90); --text-2:rgba(0,0,0,.60); --text-3:rgba(0,0,0,.42);
+    --divider:rgba(0,0,0,.08); --border:rgba(0,0,0,.10);
+    --accent:#4F46E5; --accent-ink:#fff;
+    --accent-tint:color-mix(in srgb,#4F46E5 9%,transparent);
+    --shadow:0 16px 40px rgba(0,0,0,.10),0 3px 10px rgba(0,0,0,.06);
+    --shadow-pop:0 22px 55px rgba(20,20,50,.16),0 4px 12px rgba(0,0,0,.08);
+    --kbd-bg:#fff; --kbd-border:rgba(0,0,0,.16);
+  }
+  html[data-theme="dark"]{
+    --bg:#1F1F1F; --bg-grid:rgba(255,255,255,.04);
+    --surface:#2B2B2B; --surface-2:#383838;
+    --text:rgba(255,255,255,.92); --text-2:rgba(255,255,255,.62); --text-3:rgba(255,255,255,.42);
+    --divider:rgba(255,255,255,.09); --border:rgba(255,255,255,.12);
+    --accent:color-mix(in srgb,#4F46E5 55%,white); --accent-ink:#1a1a2e;
+    --accent-tint:color-mix(in srgb,#8C86F0 14%,transparent);
+    --shadow:0 16px 40px rgba(0,0,0,.5),0 3px 10px rgba(0,0,0,.4);
+    --shadow-pop:0 24px 60px rgba(0,0,0,.6),0 4px 14px rgba(0,0,0,.5);
+    --kbd-bg:#383838; --kbd-border:rgba(255,255,255,.16);
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{scroll-behavior:smooth}
+  body{
+    font-family:'Segoe UI Variable','Segoe UI',system-ui,-apple-system,sans-serif;
+    background:var(--bg);
+    background-image:radial-gradient(var(--bg-grid) 1px,transparent 1px);
+    background-size:22px 22px;
+    color:var(--text);
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--accent);text-decoration:none}
+  a:hover{text-decoration:underline}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 24px}
+
+  /* nav */
+  nav{position:sticky;top:0;z-index:20;backdrop-filter:blur(12px);
+      background:color-mix(in srgb,var(--bg) 82%,transparent);
+      border-bottom:1px solid var(--divider)}
+  .nav-in{display:flex;align-items:center;gap:14px;height:58px}
+  .brand{display:flex;align-items:center;gap:10px;font-weight:700;font-size:17px;letter-spacing:-.01em;color:var(--text)}
+  .logo{width:30px;height:30px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;color:var(--accent-ink);font-weight:700;font-size:14px;flex:none;box-shadow:0 2px 6px color-mix(in srgb,#4F46E5 40%,transparent)}
+  .nav-sp{flex:1}
+  .nav-link{font-size:13.5px;color:var(--text-2);display:inline-flex;align-items:center;gap:6px}
+  .nav-link:hover{color:var(--text);text-decoration:none}
+  .icon-btn{width:34px;height:34px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text-2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+  .icon-btn:hover{color:var(--text);border-color:var(--text-3)}
+
+  /* buttons */
+  .btn{display:inline-flex;align-items:center;gap:9px;padding:11px 20px;border-radius:8px;font-size:14.5px;font-weight:600;cursor:pointer;border:1px solid transparent;transition:transform .08s ease}
+  .btn:hover{text-decoration:none}
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);box-shadow:0 4px 14px color-mix(in srgb,#4F46E5 34%,transparent)}
+  .btn-primary:hover{background:color-mix(in srgb,var(--accent) 88%,black)}
+  html[data-theme="dark"] .btn-primary:hover{background:color-mix(in srgb,var(--accent) 88%,white)}
+  .btn-ghost{background:transparent;color:var(--text);border-color:var(--border)}
+  .btn-ghost:hover{border-color:var(--text-3);background:var(--surface)}
+  .btn-sm{padding:7px 14px;font-size:13px;border-radius:7px}
+
+  /* hero */
+  header.hero{padding:70px 0 40px}
+  .hero-grid{display:grid;grid-template-columns:1.05fr 1fr;gap:56px;align-items:center}
+  .eyebrow{font-size:12.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
+  h1{font-size:clamp(38px,5.2vw,60px);line-height:1.04;letter-spacing:-.03em;font-weight:700}
+  h1 .accent{color:var(--accent)}
+  .lede{margin-top:22px;font-size:17px;line-height:1.6;color:var(--text-2);max-width:30em}
+  .cta-row{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin-top:30px}
+  .cta-note{margin-top:16px;font-size:12.5px;color:var(--text-3)}
+  .cta-note b{color:var(--text-2);font-weight:600}
+
+  /* popup mock */
+  .stage{display:flex;flex-direction:column;align-items:center;gap:18px}
+  .popup{width:360px;max-width:100%;background:var(--surface);border:1px solid var(--divider);border-radius:12px;box-shadow:var(--shadow-pop);overflow:hidden}
+  .pop-head{display:flex;align-items:center;height:38px;padding:0 6px 0 10px;gap:2px}
+  .chip{display:inline-flex;align-items:center;gap:5px;padding:5px 7px;border-radius:6px;font-size:13px;color:var(--text-2)}
+  .chip .muted{color:var(--text-3);font-size:12px}
+  .chip svg{color:var(--text-3)}
+  .pop-icn{width:26px;height:26px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;color:var(--text-3)}
+  .div{height:1px;background:var(--divider)}
+  .src{padding:11px 14px;font-size:15px;color:var(--text-2)}
+  .res{padding:12px 14px 6px;font-size:19px;color:var(--text)}
+  .dict{padding:2px 14px 12px}
+  .pos{font-size:10.5px;font-weight:700;letter-spacing:.09em;color:var(--text-3);margin:9px 0 5px}
+  .alts{display:flex;flex-wrap:wrap;align-items:center;gap:2px 3px}
+  .alts .a{font-size:14px;padding:1px 5px;border-radius:4px;color:var(--text-2)}
+  .alts .a.lead{color:var(--text);font-weight:600}
+  .alts .sep{color:var(--text-3);font-size:12px}
+  .pop-foot{display:flex;align-items:center;justify-content:space-between;height:34px;padding:0 8px 0 14px;border-top:1px solid var(--divider)}
+  .pop-foot .hint{font-size:11.5px;color:var(--text-3)}
+  .copy{display:inline-flex;align-items:center;gap:7px;padding:4px 8px;border-radius:6px;font-size:13px;font-weight:500;color:var(--accent)}
+  kbd{font-family:inherit;font-size:10.5px;padding:1px 6px;border:1px solid var(--kbd-border);border-bottom-width:2px;border-radius:4px;color:var(--text-2);background:var(--kbd-bg)}
+  .shortcut{display:flex;align-items:center;gap:8px;font-size:14px;color:var(--text-2)}
+  .shortcut kbd{font-size:13px;padding:4px 10px}
+
+  /* section shell */
+  section.block{padding:56px 0}
+  .sec-head{max-width:34em;margin-bottom:38px}
+  .sec-head h2{font-size:clamp(26px,3.4vw,34px);letter-spacing:-.02em;font-weight:700}
+  .sec-head p{margin-top:12px;color:var(--text-2);font-size:16px}
+
+  /* features */
+  .feat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--divider);border:1px solid var(--divider);border-radius:14px;overflow:hidden}
+  .feat{background:var(--surface);padding:22px 20px 24px;display:flex;flex-direction:column;gap:12px}
+  .feat .fi{width:34px;height:34px;border-radius:9px;background:var(--accent-tint);color:var(--accent);display:flex;align-items:center;justify-content:center}
+  .feat h3{font-size:14.5px;font-weight:600;letter-spacing:-.01em}
+  .feat p{font-size:13px;color:var(--text-2);line-height:1.5}
+
+  /* install note */
+  .note{background:var(--surface);border:1px solid var(--divider);border-radius:14px;box-shadow:var(--shadow);padding:26px 28px;display:flex;gap:20px;align-items:flex-start}
+  .note .ni{width:40px;height:40px;border-radius:10px;background:var(--surface-2);color:var(--text-2);display:flex;align-items:center;justify-content:center;flex:none}
+  .note h3{font-size:16px;font-weight:600;margin-bottom:8px}
+  .note p{font-size:14px;color:var(--text-2);line-height:1.6}
+  .note code{font-family:ui-monospace,'Cascadia Code',monospace;font-size:12.5px;background:var(--surface-2);padding:1px 6px;border-radius:4px;color:var(--text)}
+
+  /* footer */
+  footer{border-top:1px solid var(--divider);padding:34px 0 46px;margin-top:20px}
+  .foot-in{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+  .foot-in .brand{font-size:15px}
+  .foot-sp{flex:1}
+  .foot-meta{font-size:12.5px;color:var(--text-3)}
+
+  @media(max-width:900px){
+    .hero-grid{grid-template-columns:1fr;gap:40px}
+    .stage{order:2}
+    .feat-grid{grid-template-columns:repeat(2,1fr)}
+  }
+  @media(max-width:560px){
+    header.hero{padding:44px 0 20px}
+    .feat-grid{grid-template-columns:1fr}
+    .note{flex-direction:column;gap:14px}
+    .nav-hide{display:none}
+  }
+</style>
+</head>
+<body>
+
+
+
+<nav>
+  <div class="wrap nav-in">
+    <div class="brand">
+      <span class="logo">文A</span>Lingo
+    </div>
+    <span class="nav-sp"></span>
+    <a class="nav-link nav-hide" href="#features">Features</a>
+    <a class="nav-link" href="https://github.com/dorhay87/lingo" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.3c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.3-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5 3.9-1.4 6.8-5.2 6.8-9.7C22 6.6 17.5 2 12 2z"></path></svg>
+      GitHub
+    </a>
+    <button class="icon-btn" id="theme" aria-label="Toggle theme" title="Toggle theme"></button>
+    <a class="btn btn-primary btn-sm nav-hide" href="https://github.com/dorhay87/lingo/releases/latest/download/Lingo-x64-setup.exe" target="_blank" rel="noopener">Download</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div class="hero-copy">
+      <div class="eyebrow">Free · Open source · Windows</div>
+      <h1>A translator so small<br>it's just <span class="accent">a shortcut.</span></h1>
+      <p class="lede">Press one key, anywhere. Lingo translates whatever you've highlighted - or whatever you type - in a popup that appears instantly and vanishes when you're done.</p>
+      <div class="cta-row">
+        <a class="btn btn-primary" href="https://github.com/dorhay87/lingo/releases/latest/download/Lingo-x64-setup.exe" target="_blank" rel="noopener">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v13m0 0 4.5-4.5M12 16l-4.5-4.5"></path><path d="M4 20h16"></path></svg>
+          Download for Windows
+        </a>
+        <a class="btn btn-ghost" href="https://github.com/dorhay87/lingo" target="_blank" rel="noopener">View source</a>
+      </div>
+      <p class="cta-note"><b>Windows 10 / 11</b> &nbsp;·&nbsp; ~3 MB installed &nbsp;·&nbsp; No account, no telemetry</p>
+    </div>
+
+    <div class="stage">
+      <div class="popup">
+        <div class="pop-head">
+          <span class="chip">Auto <span class="muted">· Dutch</span>
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"></path></svg></span>
+          <span class="pop-icn" style="color:var(--text-2)"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h13l-3-3M20 16H7l3 3"></path></svg></span>
+          <span class="chip">English
+            <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"></path></svg></span>
+          <span class="nav-sp"></span>
+          <span class="pop-icn"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z"></path><line x1="12" y1="17" x2="12" y2="21"></line></svg></span>
+        </div>
+        <div class="div"></div>
+        <div class="src">jongen</div>
+        <div class="div"></div>
+        <div class="res">boy</div>
+        <div class="dict">
+          <div class="pos">NOUN</div>
+          <div class="alts">
+            <span class="a lead">boy</span><span class="sep">·</span>
+            <span class="a">lad</span><span class="sep">·</span>
+            <span class="a">pup</span>
+          </div>
+          <div class="pos">VERB</div>
+          <div class="alts">
+            <span class="a lead">breed</span><span class="sep">·</span>
+            <span class="a">kitten</span><span class="sep">·</span>
+            <span class="a">whelp</span>
+          </div>
+        </div>
+        <div class="pop-foot">
+          <span class="hint">Tap an alternative to copy it</span>
+          <span class="copy"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15V5a2 2 0 0 1 2-2h10"></path></svg>Copy <kbd>Enter</kbd></span>
+        </div>
+      </div>
+      <div class="shortcut"><kbd>Ctrl</kbd> + <kbd>L</kbd> from anywhere</div>
+    </div>
+  </div>
+</header>
+
+<section class="block" id="features">
+  <div class="wrap">
+    <div class="sec-head">
+      <h2>Everything it does, and nothing it doesn't</h2>
+      <p>Lingo is one popup and a shortcut. No dashboard, no history to manage, no window to keep track of.</p>
+    </div>
+    <div class="feat-grid">
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="6" width="20" height="12" rx="2"></rect><path d="M6 10h.01M10 10h.01M14 10h.01M8 14h8"></path></svg></span>
+        <h3>One shortcut, anywhere</h3>
+        <p>Ctrl + L opens the popup over any app - browser, editor, chat, PDF.</p>
+      </div>
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7V5a1 1 0 0 1 1-1h4"></path><path d="M20 7V5a1 1 0 0 0-1-1h-4"></path><path d="M4 17v2a1 1 0 0 0 1 1h4"></path><path d="M20 17v2a1 1 0 0 1-1 1h-4"></path><rect x="8" y="9" width="8" height="6" rx="1" fill="currentColor" stroke="none" opacity=".9"></rect></svg></span>
+        <h3>Grabs your selection</h3>
+        <p>Highlight text first and it's pre-filled - translation starts the instant the popup appears.</p>
+      </div>
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h6"></path><path d="M18 15l2 2 3-3"></path></svg></span>
+        <h3>Live as you type</h3>
+        <p>No selection? Just type. Translation updates line by line while you write.</p>
+      </div>
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"></path><path d="M8 7h7M8 11h5"></path></svg></span>
+        <h3>A dictionary for words</h3>
+        <p>Single words get senses grouped by part of speech, with alternatives and definitions.</p>
+      </div>
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"></circle><path d="M3 12h18M12 3c2.5 2.5 2.5 15 0 18M12 3c-2.5 2.5-2.5 15 0 18"></path></svg></span>
+        <h3>Detects &amp; flips scripts</h3>
+        <p>Auto-detects the source language and lays out right-to-left scripts like Hebrew and Arabic correctly.</p>
+      </div>
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9 9 0 0 1 9 9"></path><rect x="4" y="12" width="16" height="8" rx="2"></rect><path d="M9 16h6"></path></svg></span>
+        <h3>Google in, DeepL optional</h3>
+        <p>Google works out of the box, key-free. Prefer DeepL? Drop in your own key.</p>
+      </div>
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z"></path><line x1="12" y1="17" x2="12" y2="21"></line></svg></span>
+        <h3>Pin when you need it</h3>
+        <p>Normally it closes the moment you click away. Pin it to keep it open while you work.</p>
+      </div>
+      <div class="feat">
+        <span class="fi"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"></circle><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M19 5l-2 2M7 17l-2 2"></path></svg></span>
+        <h3>Light, dark &amp; accents</h3>
+        <p>Follows your Windows theme, and you pick the accent color that fits your setup.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="block">
+  <div class="wrap">
+    <div class="note">
+      <span class="ni"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"></path><path d="M9 12l2 2 4-4"></path></svg></span>
+      <div>
+        <h3>A note on installing</h3>
+        <p>The installer isn't code-signed yet - signing certificates are expensive for a free project. Windows SmartScreen may show a blue warning the first time you run it. Click <code>More info</code>, then <code>Run anyway</code>. Everything is open source, so you can read exactly what it does <a href="https://github.com/dorhay87/lingo" target="_blank" rel="noopener">on GitHub</a> before you trust it.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div class="brand"><span class="logo" style="width:26px;height:26px;font-size:12px">文A</span>Lingo</div>
+    <span class="foot-sp"></span>
+    <a class="nav-link" href="https://github.com/dorhay87/lingo" target="_blank" rel="noopener">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.5 2 2 6.6 2 12.3c0 4.5 2.9 8.3 6.8 9.7.5.1.7-.2.7-.5v-1.7c-2.8.6-3.4-1.4-3.4-1.4-.4-1.2-1.1-1.5-1.1-1.5-.9-.6.1-.6.1-.6 1 .1 1.5 1 1.5 1 .9 1.6 2.4 1.1 3 .9.1-.7.3-1.1.6-1.4-2.2-.3-4.6-1.1-4.6-5 0-1.1.4-2 1-2.7-.1-.3-.4-1.3.1-2.7 0 0 .8-.3 2.7 1a9.3 9.3 0 0 1 5 0c1.9-1.3 2.7-1 2.7-1 .5 1.4.2 2.4.1 2.7.6.7 1 1.6 1 2.7 0 3.9-2.3 4.7-4.6 5 .4.3.7.9.7 1.9v2.8c0 .3.2.6.7.5 3.9-1.4 6.8-5.2 6.8-9.7C22 6.6 17.5 2 12 2z"></path></svg>
+      github.com/dorhay87/lingo
+    </a>
+  </div>
+  <div class="wrap" style="margin-top:14px">
+    <span class="foot-meta">Free and open source · A translator so small it's just a shortcut.</span>
+  </div>
+</footer>
+
+<script>
+  (function(){
+    var root=document.documentElement, btn=document.getElementById('theme');
+    var sun='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5 19 19M19 5l-1.5 1.5M6.5 17.5 5 19"/></svg>';
+    var moon='<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>';
+    function apply(t){
+      root.setAttribute('data-theme',t);
+      btn.innerHTML = t==='dark' ? sun : moon;
+      var m=document.querySelector('meta[name=theme-color]'); if(m) m.setAttribute('content', t==='dark'?'#1F1F1F':'#FBFBFB');
+    }
+    var saved;
+    try{ saved=localStorage.getItem('lingo-theme'); }catch(e){}
+    if(!saved) saved = (window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark':'light';
+    apply(saved);
+    btn.addEventListener('click',function(){
+      var next = root.getAttribute('data-theme')==='dark'?'light':'dark';
+      apply(next);
+      try{ localStorage.setItem('lingo-theme',next); }catch(e){}
+    });
+  })();
+</script>
+
+
+
+</body></html>

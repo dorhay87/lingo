@@ -1,0 +1,392 @@
+/* Popup window: transparent halo around a 380px card so the CSS drop shadow
+   has room. Halo size must match SHADOW_MARGIN in popup.rs. */
+
+html,
+body {
+  background: transparent;
+  overflow: hidden;
+}
+
+.halo {
+  padding: 24px;
+  width: 428px;
+}
+
+.card {
+  width: 380px;
+  background: var(--surface);
+  border: 1px solid var(--popup-border);
+  border-radius: var(--radius-popup);
+  box-shadow: var(--popup-shadow);
+  overflow: hidden;
+  transition: height var(--motion-height) ease-out;
+  max-height: 450px;
+  /* Hidden until the show handshake completes; .enter replays the animation
+     on every open, not only on first mount. */
+  opacity: 0;
+}
+
+.card.enter {
+  opacity: 1;
+  animation: popupEnter var(--motion-enter) ease-out;
+}
+
+/* While a language menu is open it may extend past the card bottom; the
+   window is grown to cover it, so let it escape the card's clipping. */
+.card.menu-open {
+  overflow: visible;
+}
+
+/* Measured by the ResizeObserver driving window height. */
+.card-content {
+  width: 100%;
+}
+
+@keyframes popupEnter {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* ---- header ---- */
+
+.header {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0 6px 0 8px;
+  gap: 2px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.chip:hover {
+  background: var(--hover);
+}
+
+.chip .detected {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.chip svg {
+  color: var(--text-tertiary);
+}
+
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-control);
+  color: var(--text-tertiary);
+  cursor: pointer;
+}
+
+.icon-btn:hover {
+  background: var(--hover);
+}
+
+.icon-btn:disabled {
+  color: var(--text-faint);
+  cursor: default;
+  background: none;
+}
+
+.icon-btn.active {
+  color: var(--accent);
+  background: var(--accent-active-bg);
+}
+
+.spacer {
+  flex: 1;
+}
+
+.divider {
+  height: 1px;
+  background: var(--divider);
+}
+
+/* ---- source pane ---- */
+
+.source {
+  display: block;
+  width: 100%;
+  padding: 11px 14px 12px;
+  border: none;
+  background: none;
+  resize: none;
+  outline: none;
+  font: inherit;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--text-source);
+  user-select: text;
+  cursor: text;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.source::placeholder {
+  color: var(--text-faint);
+}
+
+/* ---- result pane ---- */
+
+.result {
+  padding: 12px 14px 13px;
+  font-size: 18px;
+  line-height: 1.42;
+  color: var(--text-result);
+  user-select: text;
+  cursor: text;
+}
+
+.result.with-dict {
+  padding-bottom: 6px;
+}
+
+.loading {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+  height: 43px;
+  padding: 12px 14px 13px;
+}
+
+.loading span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+  animation: lingoDot 1.2s infinite ease-in-out;
+}
+
+.loading span:nth-child(2) {
+  animation-delay: 0.18s;
+}
+
+.loading span:nth-child(3) {
+  animation-delay: 0.36s;
+}
+
+/* ---- error row ---- */
+
+.error-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 12px 14px 13px;
+}
+
+.error-row svg {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.error-row .message {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+/* ---- dictionary ---- */
+
+.dict {
+  padding: 2px 14px 12px;
+}
+
+.dict .pos {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.09em;
+  color: var(--text-tertiary);
+  margin: 8px 0 5px;
+  text-transform: uppercase;
+}
+
+.dict .pos:not(:first-child) {
+  margin-top: 12px;
+}
+
+.dict .terms {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 3px;
+  margin-bottom: 4px;
+}
+
+.dict .term {
+  border: none;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text-result);
+  cursor: pointer;
+  padding: 1px 5px;
+  border-radius: var(--radius-chip);
+}
+
+.dict .term:hover {
+  background: var(--accent-hover-bg);
+  color: var(--accent);
+}
+
+.dict .term.rank-0 {
+  font-weight: 600;
+}
+
+.dict .term.rank-1 {
+  opacity: 0.85;
+}
+
+.dict .term.rank-2 {
+  opacity: 0.72;
+}
+
+.dict .term.rank-3 {
+  opacity: 0.62;
+}
+
+.dict .dot {
+  color: var(--text-faint);
+  font-size: 12px;
+}
+
+.dict .definition {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text-tertiary);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* ---- footer ---- */
+
+.footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 8px 0 14px;
+  border-top: 1px solid var(--divider);
+}
+
+.footer .hint {
+  font-size: 11.5px;
+  color: var(--text-faint);
+}
+
+.footer .hint.pinned {
+  color: var(--accent);
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.footer .hint.pinned::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.text-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 8px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-control);
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.text-btn:hover {
+  background: var(--accent-hover-bg);
+}
+
+kbd {
+  font-family: inherit;
+  font-size: 10.5px;
+  padding: 1px 5px;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-chip);
+  color: var(--text-tertiary);
+  background: var(--kbd-bg);
+}
+
+/* ---- language dropdown ---- */
+
+.menu-anchor {
+  position: relative;
+}
+
+.menu {
+  position: absolute;
+  top: 32px;
+  left: 0;
+  z-index: 10;
+  min-width: 150px;
+  max-height: 240px;
+  overflow-y: auto;
+  background: var(--layer);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+  padding: 4px;
+}
+
+.menu-item {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: none;
+  background: none;
+  border-radius: var(--radius-chip);
+  font: inherit;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.menu-item:hover {
+  background: var(--hover);
+}
+
+.menu-item.selected {
+  color: var(--accent);
+  background: var(--accent-hover-bg);
+}
