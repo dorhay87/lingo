@@ -24,22 +24,23 @@ short definitions. No account, no telemetry, no clutter.
   chip; the target never changes unless you change it
 - **RTL done right** - Hebrew and other right-to-left scripts render per
   pane; the popup chrome never flips
+- **Hear it spoken** - a speaker on each pane reads the text aloud, the
+  source in its language and the translation in yours
 - **Quick actions** - `Enter` copies the translation and dismisses,
   `Shift+Enter` inserts a newline, `Esc` hides, tap any dictionary
   alternative to copy it, pin the popup to survive focus loss
-- **Providers** - Google out of the box (no key), DeepL with your own key,
-  switchable mid-session
-- **Personal** - light/dark theme (follows Windows until you choose), accent
-  color, ordered language list, launch at startup
+- **Personal** - default source and target languages, light/dark theme
+  (follows Windows until you choose), accent color, ordered language list,
+  launch at startup
+- **Zero setup** - no account, no API key, nothing to configure before the
+  first translation
 - **Tiny** - ~2.6 MB installer. Built with Tauri on the WebView2 runtime
   Windows already ships, not a bundled browser
 
-> **Provider note.** Lingo is not affiliated with or endorsed by Google or
-> DeepL. The built-in Google provider talks to an unofficial, undocumented
-> endpoint (the one Google's own web translator uses); it may change, get
-> rate-limited, or stop working at any time, and using it may not comply
-> with Google's Terms of Service. For a guaranteed, sanctioned service, use
-> the DeepL provider with your own API key.
+> **Note.** Lingo is not affiliated with or endorsed by Google. Translation
+> and speech use an unofficial, undocumented endpoint (the one Google's own
+> web translator uses); it may change, get rate-limited, or stop working at
+> any time, and using it may not comply with Google's Terms of Service.
 
 ## Install
 
@@ -77,7 +78,7 @@ Config is stored via tauri-plugin-store under the app's data directory
 
 ```text
 src/            Solid frontend: popup window, settings window, typed IPC
-src-tauri/      Rust backend: tray, hotkey, capture, providers, config
+src-tauri/      Rust backend: tray, hotkey, capture, translation, config
 src-tauri/fixtures/  recorded Google endpoint responses for parser tests
 promo/          static promo card (source of promo.png)
 docs/           landing page (GitHub Pages)
@@ -91,7 +92,6 @@ Strict one-way data flow: the frontend sends intents as Tauri commands
 (`translate`, `update_config`, `pin_toggle`, ...) and renders broadcast
 events (`translation:result`, `config:changed`, `popup:show`, ...). Rust
 owns all state: config, popup session, request lifecycle, and the dictionary
-heuristic. Providers implement one trait (`TranslationProvider`) and are
-swappable per request. The unofficial Google endpoint parser is tested
-exclusively against recorded responses in `src-tauri/fixtures/google/`;
-tests never hit the network.
+heuristic. The unofficial endpoint parser is tested exclusively against
+recorded responses in `src-tauri/fixtures/google/`; tests never hit the
+network.

@@ -1,12 +1,10 @@
-use std::collections::HashMap;
-
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
 use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_store::StoreExt as _;
 
 use crate::hotkey;
-use crate::types::{langs_equal, Lang, ProviderKind, Theme};
+use crate::types::{langs_equal, Lang, Theme};
 
 const STORE_FILE: &str = "config.json";
 const STORE_KEY: &str = "config";
@@ -15,8 +13,6 @@ const STORE_KEY: &str = "config";
 #[serde(default)]
 pub struct Config {
     pub hotkey: String,
-    pub provider: ProviderKind,
-    pub api_keys: HashMap<ProviderKind, String>,
     pub source_lang: Lang,
     pub target_lang: Lang,
     pub lang_preferences: Vec<Lang>,
@@ -30,8 +26,6 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             hotkey: "Ctrl+L".into(),
-            provider: ProviderKind::GoogleFree,
-            api_keys: HashMap::new(),
             source_lang: "auto".into(),
             target_lang: "en".into(),
             lang_preferences: vec!["en".into(), "he".into(), "nl".into()],
@@ -233,7 +227,6 @@ mod tests {
     fn default_config_values() {
         let c = Config::default();
         assert_eq!(c.hotkey, "Ctrl+L");
-        assert_eq!(c.provider, ProviderKind::GoogleFree);
         assert_eq!(c.target_lang, "en");
         assert_eq!(c.lang_preferences, vec!["en", "he", "nl"]);
         assert!(!c.launch_at_startup);
@@ -252,14 +245,11 @@ mod tests {
         let base = Config::default();
         let patched = merge_patch(
             &base,
-            &json!({ "provider": "DeepL", "api_keys": { "DeepL": "k:fx" } }),
+            &json!({ "target_lang": "nl", "lang_preferences": ["nl", "en"] }),
         )
         .unwrap();
-        assert_eq!(patched.provider, ProviderKind::DeepL);
-        assert_eq!(
-            patched.api_keys.get(&ProviderKind::DeepL).unwrap(),
-            "k:fx"
-        );
+        assert_eq!(patched.target_lang, "nl");
+        assert_eq!(patched.lang_preferences, vec!["nl", "en"]);
         assert_eq!(patched.hotkey, base.hotkey);
     }
 
@@ -322,11 +312,13 @@ mod tests {
     }
 
     #[test]
-    fn provider_kind_works_as_json_map_key() {
-        let mut keys = HashMap::new();
-        keys.insert(ProviderKind::DeepL, "abc".to_string());
-        let round: HashMap<ProviderKind, String> =
-            serde_json::from_str(&serde_json::to_string(&keys).unwrap()).unwrap();
-        assert_eq!(round.get(&ProviderKind::DeepL).unwrap(), "abc");
+    fn stored_config_with_removed_provider_fields_still_loads() {
+        let c: Config = serde_json::from_value(json!({
+            "provider": "DeepL",
+            "api_keys": { "DeepL": "k:fx" },
+            "target_lang": "nl"
+        }))
+        .unwrap();
+        assert_eq!(c.target_lang, "nl");
     }
 }

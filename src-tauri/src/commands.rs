@@ -142,39 +142,3 @@ pub async fn speak(
     let bytes = crate::translate::tts::fetch_speech(state.http.clone(), &text, &lang).await?;
     Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
 }
-
-/// Settings "Test" button: run a one-word translation through the given
-/// provider/key combination without touching the saved config.
-#[tauri::command]
-pub async fn test_provider(
-    state: State<'_, AppState>,
-    provider: crate::types::ProviderKind,
-    api_key: String,
-) -> Result<(), crate::types::ProviderError> {
-    use crate::types::{ProviderKind, TranslateRequest};
-
-    let mut config = state.config.read().expect("config lock poisoned").clone();
-    config.provider = provider;
-    if provider != ProviderKind::GoogleFree {
-        config.api_keys.insert(provider, api_key);
-    }
-    let candidate = crate::translate::provider_for(&config, state.http.clone());
-    // Pick a target the provider claims to support.
-    let langs = candidate.supported_langs();
-    let tgt = langs
-        .iter()
-        .find(|l| **l == "nl")
-        .or_else(|| langs.first())
-        .copied()
-        .unwrap_or("en");
-    candidate
-        .translate(&TranslateRequest {
-            request_id: 0,
-            text: "hello".into(),
-            src: "en".into(),
-            tgt: tgt.into(),
-            want_dictionary: false,
-        })
-        .await
-        .map(|_| ())
-}

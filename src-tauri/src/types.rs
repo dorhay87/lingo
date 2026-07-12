@@ -2,12 +2,6 @@ use serde::{Deserialize, Serialize};
 
 pub type Lang = String;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-pub enum ProviderKind {
-    GoogleFree,
-    DeepL,
-}
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Theme {
     System,
@@ -60,30 +54,24 @@ pub enum ProviderError {
     Network(String),
     #[error("provider rate limit hit")]
     RateLimited,
-    #[error("provider rejected the API key")]
-    AuthFailed,
 }
 
 impl ProviderError {
     pub fn retryable(&self) -> bool {
-        matches!(self, ProviderError::Network(_) | ProviderError::RateLimited)
+        true
     }
 
-    /// Stable machine-readable kind for the frontend.
     pub fn kind(&self) -> &'static str {
         match self {
             ProviderError::Network(_) => "network",
             ProviderError::RateLimited => "rate_limited",
-            ProviderError::AuthFailed => "auth_failed",
         }
     }
 
-    /// Short human message rendered in the popup.
     pub fn user_message(&self) -> String {
         match self {
             ProviderError::Network(_) => "Couldn't reach translator".into(),
             ProviderError::RateLimited => "Rate limited, try again in a moment".into(),
-            ProviderError::AuthFailed => "API key was rejected".into(),
         }
     }
 }
@@ -139,6 +127,5 @@ mod tests {
     fn provider_error_retryability() {
         assert!(ProviderError::Network("x".into()).retryable());
         assert!(ProviderError::RateLimited.retryable());
-        assert!(!ProviderError::AuthFailed.retryable());
     }
 }

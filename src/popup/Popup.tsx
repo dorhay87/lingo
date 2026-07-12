@@ -13,7 +13,6 @@ import {
   commands,
   events,
   type Config,
-  type ProviderKind,
   type TranslationErrorEvent,
   type TranslationResultEvent,
   type UnlistenFn,
@@ -24,11 +23,6 @@ import { createLatestGuard, debounce } from "../lib/latest";
 import { canSpeak, createPlayer } from "../lib/speech";
 
 const DEBOUNCE_MS = 400;
-
-const PROVIDER_LABEL: Record<ProviderKind, string> = {
-  GoogleFree: "Google",
-  DeepL: "DeepL",
-};
 
 type Status = "idle" | "loading" | "result" | "error";
 
@@ -301,9 +295,8 @@ export function Popup() {
   const footerHint = createMemo(() => {
     if (pinned()) return null; // rendered separately with the dot
     if (hasDict()) return "Tap an alternative to copy it";
-    const r = result();
-    if (!r) return "";
-    return `${text().trim().length} characters · ${PROVIDER_LABEL[r.provider]}`;
+    if (!result()) return "";
+    return `${text().trim().length} characters`;
   });
 
   return (

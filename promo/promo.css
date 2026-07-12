@@ -168,6 +168,22 @@ h1 em {
   background: rgba(0, 0, 0, 0.07);
 }
 
+.pane-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.pane-row .source,
+.pane-row .result {
+  flex: 1;
+}
+
+.speak {
+  display: inline-flex;
+  padding: 13px 12px 0 4px;
+  color: rgba(0, 0, 0, 0.32);
+}
+
 .source {
   padding: 11px 14px 12px;
   font-size: 15px;

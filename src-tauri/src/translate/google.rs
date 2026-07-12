@@ -2,9 +2,6 @@
 //! every index may be null or absent, so all parsing here is defensive and
 //! exercised by recorded fixtures in fixtures/google/.
 
-use async_trait::async_trait;
-
-use super::TranslationProvider;
 use crate::types::{
     normalize_lang, Definition, DictEntry, ProviderError, ScoredTerm, TranslateRequest,
     Translation,
@@ -13,61 +10,42 @@ use crate::types::{
 const ENDPOINT: &str = "https://translate.googleapis.com/translate_a/single";
 const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36";
 
-pub struct GoogleFree {
+pub async fn translate(
     http: reqwest::Client,
-}
-
-impl GoogleFree {
-    pub fn new(http: reqwest::Client) -> Self {
-        Self { http }
+    req: &TranslateRequest,
+) -> Result<Translation, ProviderError> {
+    let mut params = vec![
+        ("client", "gtx"),
+        ("sl", req.src.as_str()),
+        ("tl", req.tgt.as_str()),
+        ("dt", "t"),
+    ];
+    if req.want_dictionary {
+        params.extend([("dt", "bd"), ("dt", "md"), ("dt", "at")]);
     }
-}
+    params.push(("q", req.text.as_str()));
 
-#[async_trait]
-impl TranslationProvider for GoogleFree {
-    async fn translate(&self, req: &TranslateRequest) -> Result<Translation, ProviderError> {
-        let mut params = vec![
-            ("client", "gtx"),
-            ("sl", req.src.as_str()),
-            ("tl", req.tgt.as_str()),
-            ("dt", "t"),
-        ];
-        if req.want_dictionary {
-            params.extend([("dt", "bd"), ("dt", "md"), ("dt", "at")]);
-        }
-        params.push(("q", req.text.as_str()));
+    let response = http
+        .get(ENDPOINT)
+        .header(reqwest::header::USER_AGENT, USER_AGENT)
+        .query(&params)
+        .send()
+        .await
+        .map_err(|e| ProviderError::Network(e.to_string()))?;
 
-        let response = self
-            .http
-            .get(ENDPOINT)
-            .header(reqwest::header::USER_AGENT, USER_AGENT)
-            .query(&params)
-            .send()
-            .await
-            .map_err(|e| ProviderError::Network(e.to_string()))?;
-
-        let status = response.status();
-        if status.as_u16() == 429 {
-            return Err(ProviderError::RateLimited);
-        }
-        if !status.is_success() {
-            return Err(ProviderError::Network(format!("http {status}")));
-        }
-
-        let body = response
-            .text()
-            .await
-            .map_err(|e| ProviderError::Network(e.to_string()))?;
-        parse_response(&body, req.request_id)
+    let status = response.status();
+    if status.as_u16() == 429 {
+        return Err(ProviderError::RateLimited);
+    }
+    if !status.is_success() {
+        return Err(ProviderError::Network(format!("http {status}")));
     }
 
-    fn supported_langs(&self) -> &[&'static str] {
-        GOOGLE_LANGS
-    }
-
-    fn supports_dictionary(&self) -> bool {
-        true
-    }
+    let body = response
+        .text()
+        .await
+        .map_err(|e| ProviderError::Network(e.to_string()))?;
+    parse_response(&body, req.request_id)
 }
 
 fn parse_failure(body: &str) -> ProviderError {
@@ -211,15 +189,6 @@ fn locate_definitions(root: &[serde_json::Value]) -> Vec<Definition> {
     }
     vec![]
 }
-
-/// Codes accepted by the endpoint (subset relevant to the UI catalog).
-static GOOGLE_LANGS: &[&str] = &[
-    "af", "sq", "am", "ar", "hy", "az", "eu", "be", "bn", "bs", "bg", "ca", "zh-CN", "zh-TW",
-    "hr", "cs", "da", "nl", "en", "et", "fi", "fr", "gl", "ka", "de", "el", "gu", "he", "hi",
-    "hu", "is", "id", "ga", "it", "ja", "kn", "kk", "km", "ko", "lo", "lv", "lt", "mk", "ms",
-    "ml", "mt", "mr", "mn", "ne", "no", "fa", "pl", "pt", "pa", "ro", "ru", "sr", "si", "sk",
-    "sl", "es", "sw", "sv", "ta", "te", "th", "tr", "uk", "ur", "uz", "vi", "cy", "yi",
-];
 
 #[cfg(test)]
 mod tests {

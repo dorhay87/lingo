@@ -1,44 +1,17 @@
-//! Provider trait, request orchestration, cancellation, auto-swap, and the
-//! dictionary heuristic. Commands submit here; results leave as events.
-
-pub mod deepl;
 pub mod google;
 pub mod tts;
 
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::Mutex;
 
-use async_trait::async_trait;
 use serde_json::json;
 use tauri::{AppHandle, Emitter, Manager};
 
-use crate::config::Config;
-use crate::types::{DictEntry, Lang, ProviderError, ProviderKind, TranslateRequest, Translation};
-
-#[async_trait]
-pub trait TranslationProvider: Send + Sync {
-    async fn translate(&self, req: &TranslateRequest) -> Result<Translation, ProviderError>;
-    fn supported_langs(&self) -> &[&'static str];
-    fn supports_dictionary(&self) -> bool;
-}
-
-pub fn provider_for(config: &Config, http: reqwest::Client) -> Box<dyn TranslationProvider> {
-    match config.provider {
-        ProviderKind::GoogleFree => Box::new(google::GoogleFree::new(http)),
-        ProviderKind::DeepL => Box::new(deepl::DeepL::new(
-            http,
-            config
-                .api_keys
-                .get(&ProviderKind::DeepL)
-                .cloned()
-                .unwrap_or_default(),
-        )),
-    }
-}
+use crate::types::{DictEntry, Lang};
 
 /// Owns the monotonic request counter and the in-flight task. A new request
-/// aborts the previous provider call; the frontend additionally drops stale
-/// results by request_id, so both halves of the race are covered.
+/// aborts the previous call; the frontend additionally drops stale results
+/// by request_id, so both halves of the race are covered.
 pub struct Orchestrator {
     counter: AtomicU64,
     inflight: Mutex<Option<tauri::async_runtime::JoinHandle<()>>>,
@@ -84,15 +57,9 @@ impl Orchestrator {
 
 async fn run_request(app: AppHandle, request_id: u64, text: String, src: Lang, tgt: Lang) {
     let state = app.state::<crate::AppState>();
-    let config = state
-        .config
-        .read()
-        .expect("config lock poisoned")
-        .clone();
-    let provider = provider_for(&config, state.http.clone());
-    let want_dictionary = is_dictionary_query(&text) && provider.supports_dictionary();
+    let want_dictionary = is_dictionary_query(&text);
 
-    let req = TranslateRequest {
+    let req = crate::types::TranslateRequest {
         request_id,
         text,
         src,
@@ -100,7 +67,7 @@ async fn run_request(app: AppHandle, request_id: u64, text: String, src: Lang, t
         want_dictionary,
     };
 
-    match provider.translate(&req).await {
+    match google::translate(state.http.clone(), &req).await {
         Ok(mut translation) => {
             translation.request_id = request_id;
             if !want_dictionary {
@@ -117,13 +84,7 @@ async fn run_request(app: AppHandle, request_id: u64, text: String, src: Lang, t
                 session.last_primary = Some(translation.primary.clone());
                 session.last_detected = translation.detected_lang.clone();
             }
-            let _ = app.emit(
-                "translation:result",
-                json!({
-                    "translation": translation,
-                    "provider": config.provider,
-                }),
-            );
+            let _ = app.emit("translation:result", json!({ "translation": translation }));
         }
         Err(error) => {
             log::debug!("translation {request_id} failed: {error}");
@@ -141,10 +102,9 @@ async fn run_request(app: AppHandle, request_id: u64, text: String, src: Lang, t
 }
 
 /// Providers return the full long tail of dictionary senses; Google's list
-/// spans five orders of magnitude in frequency and ends in archaic curios
-/// ("get" as a noun for animal offspring). Keep a term only when it is within
-/// 1/2000 of its group's best score, capped per group. Groups without any
-/// scores (some providers omit them) are kept as-is, capped.
+/// spans five orders of magnitude in frequency and ends in archaic curios.
+/// Keep a term only when it is within 1/2000 of its group's best score,
+/// capped per group. Groups without any scores are kept as-is, capped.
 const MIN_RELATIVE_SCORE: f32 = 5e-4;
 const MAX_TERMS_PER_POS: usize = 6;
 
@@ -177,6 +137,7 @@ pub fn is_dictionary_query(text: &str) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::types::ScoredTerm;
 
     #[test]
     fn dictionary_heuristic() {
@@ -194,8 +155,6 @@ mod tests {
 
     #[test]
     fn trims_long_tail_terms_from_recorded_response() {
-        // "jongen" nl->en: noun tail holds curios like "get" and "loon" at
-        // ~1e-6 vs "boy" at 0.68; the verb group's scores are mutually close.
         let fixture = include_str!("../../fixtures/google/word_nl_en.json");
         let mut t = google::parse_response(fixture, 1).unwrap();
         trim_alternatives(&mut t.alternatives);
@@ -216,7 +175,6 @@ mod tests {
 
     #[test]
     fn trim_caps_group_size_and_keeps_unscored_groups() {
-        use crate::types::ScoredTerm;
         let mut alternatives = vec![DictEntry {
             pos: "noun".into(),
             terms: (0..10)
@@ -227,13 +185,11 @@ mod tests {
                 .collect(),
         }];
         trim_alternatives(&mut alternatives);
-        // No scores at all: nothing to rank by, just cap the list.
         assert_eq!(alternatives[0].terms.len(), MAX_TERMS_PER_POS);
     }
 
     #[test]
     fn trim_drops_groups_left_empty() {
-        use crate::types::ScoredTerm;
         let mut alternatives = vec![DictEntry {
             pos: "noun".into(),
             terms: vec![

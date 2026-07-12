@@ -1,7 +1,6 @@
 import {
   For,
   Show,
-  createEffect,
   createMemo,
   createSignal,
   onCleanup,
@@ -12,8 +11,6 @@ import {
   events,
   type Config,
   type ConfigError,
-  type ProviderKind,
-  type ProviderTestError,
   type Theme,
   type UnlistenFn,
 } from "../lib/ipc";
@@ -22,11 +19,6 @@ import { srcOptions, tgtOptions } from "../lib/langOptions";
 import { LANG_LIST, langName } from "../lib/langs";
 
 const ACCENT_PRESETS = ["#4F46E5", "#0F9D8C", "#2E8B57", "#C2410C", "#9333EA"];
-
-const PROVIDERS: { kind: ProviderKind; title: string; subtitle: string }[] = [
-  { kind: "GoogleFree", title: "Google", subtitle: "No key needed" },
-  { kind: "DeepL", title: "DeepL", subtitle: "API key" },
-];
 
 const THEMES: Theme[] = ["System", "Light", "Dark"];
 
@@ -58,7 +50,6 @@ export function Settings() {
         <main class="settings">
           <HotkeySection config={cfg()} />
           <LanguagesSection config={cfg()} patch={patch} />
-          <ProviderSection config={cfg()} patch={patch} />
           <GeneralSection config={cfg()} patch={patch} />
         </main>
       )}
@@ -310,116 +301,6 @@ function LanguagesSection(props: {
   );
 }
 
-// ---- Provider ----
-
-function ProviderSection(props: {
-  config: Config;
-  patch: (p: Partial<Config>) => Promise<void>;
-}) {
-  const [reveal, setReveal] = createSignal(false);
-  const [testing, setTesting] = createSignal(false);
-  const [testResult, setTestResult] = createSignal<
-    { ok: boolean; message: string } | null
-  >(null);
-
-  const selected = () => props.config.provider;
-  const needsKey = () => selected() !== "GoogleFree";
-
-  // Local draft of the key field: Test must exercise what the user typed,
-  // not whatever the config held before the blur-save round-tripped.
-  const [keyDraft, setKeyDraft] = createSignal("");
-  createEffect(() => setKeyDraft(props.config.api_keys[selected()] ?? ""));
-
-  const choose = (kind: ProviderKind) => {
-    setTestResult(null);
-    setReveal(false);
-    void props.patch({ provider: kind });
-  };
-
-  const saveKey = (value: string) =>
-    void props.patch({
-      api_keys: { ...props.config.api_keys, [selected()]: value },
-    });
-
-  const runTest = async () => {
-    setTesting(true);
-    setTestResult(null);
-    saveKey(keyDraft());
-    try {
-      await commands.testProvider(selected(), keyDraft());
-      setTestResult({ ok: true, message: "Connected - key valid" });
-    } catch (err) {
-      const pe = err as ProviderTestError;
-      setTestResult({ ok: false, message: pe.message });
-    } finally {
-      setTesting(false);
-    }
-  };
-
-  return (
-    <section>
-      <div class="section-title">Provider</div>
-      <div class="provider-cards">
-        <For each={PROVIDERS}>
-          {(p) => (
-            <button
-              class="provider-card"
-              classList={{ selected: selected() === p.kind }}
-              onClick={() => choose(p.kind)}
-            >
-              <span class="radio" />
-              <span>
-                <div class="title">{p.title}</div>
-                <div class="subtitle">{p.subtitle}</div>
-              </span>
-            </button>
-          )}
-        </For>
-      </div>
-      <Show when={needsKey()}>
-        <div class="api-key-block">
-          <div class="label">API key</div>
-          <div class="api-key-row">
-            <div class="api-key-input">
-              <input
-                type={reveal() ? "text" : "password"}
-                value={keyDraft()}
-                onInput={(e) => setKeyDraft(e.currentTarget.value)}
-                onChange={(e) => saveKey(e.currentTarget.value)}
-                placeholder="Paste your key"
-              />
-              <button
-                class="eye"
-                title={reveal() ? "Hide key" : "Show key"}
-                onClick={() => setReveal(!reveal())}
-              >
-                <EyeIcon />
-              </button>
-            </div>
-            <button
-              class="btn-primary"
-              disabled={testing()}
-              onClick={() => void runTest()}
-            >
-              {testing() ? "Testing…" : "Test"}
-            </button>
-          </div>
-          <Show when={testResult()}>
-            {(r) => (
-              <div class="test-status" classList={{ ok: r().ok, fail: !r().ok }}>
-                <Show when={r().ok} fallback={<WarnIcon />}>
-                  <CheckIcon />
-                </Show>
-                {r().message}
-              </div>
-            )}
-          </Show>
-        </div>
-      </Show>
-    </section>
-  );
-}
-
 // ---- General ----
 
 function GeneralSection(props: {
@@ -507,14 +388,6 @@ function WarnIcon() {
   );
 }
 
-function CheckIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  );
-}
-
 function GripIcon() {
   return (
     <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
@@ -551,15 +424,6 @@ function SearchIcon() {
     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round">
       <circle cx="11" cy="11" r="7" />
       <line x1="21" y1="21" x2="16.5" y2="16.5" />
-    </svg>
-  );
-}
-
-function EyeIcon() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-      <path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z" />
-      <circle cx="12" cy="12" r="3" />
     </svg>
   );
 }

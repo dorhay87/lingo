@@ -5,14 +5,10 @@ import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export type Lang = string;
 
-export type ProviderKind = "GoogleFree" | "DeepL";
-
 export type Theme = "System" | "Light" | "Dark";
 
 export interface Config {
   hotkey: string;
-  provider: ProviderKind;
-  api_keys: Partial<Record<ProviderKind, string>>;
   source_lang: Lang;
   target_lang: Lang;
   lang_preferences: Lang[];
@@ -46,7 +42,6 @@ export interface Translation {
 
 export interface TranslationResultEvent {
   translation: Translation;
-  provider: ProviderKind;
 }
 
 export interface TranslationErrorEvent {
@@ -82,8 +77,6 @@ export const commands = {
   popupReady: () => invoke<void>("popup_ready"),
   openSettings: () => invoke<void>("open_settings"),
   resizePopup: (height: number) => invoke<void>("resize_popup", { height }),
-  testProvider: (provider: ProviderKind, apiKey: string) =>
-    invoke<void>("test_provider", { provider, apiKey }),
   speak: (text: string, lang: Lang) =>
     invoke<string>("speak", { text, lang }),
 };
@@ -91,11 +84,6 @@ export const commands = {
 /** Error shape thrown by update_config when a hotkey is already taken. */
 export interface ConfigError {
   kind: "hotkey_in_use" | "invalid_hotkey" | "invalid_config" | "io";
-  message: string;
-}
-
-export interface ProviderTestError {
-  kind: "network" | "rate_limited" | "auth_failed";
   message: string;
 }
 

@@ -119,7 +119,6 @@ fn main() {
             commands::copy_text,
             commands::update_config,
             commands::open_settings,
-            commands::test_provider,
             commands::pin_toggle,
             commands::speak,
         ])
