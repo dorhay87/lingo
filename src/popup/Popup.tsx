@@ -21,6 +21,7 @@ import {
 import { srcOptions as srcOptionsFor, tgtOptions as tgtOptionsFor } from "../lib/langOptions";
 import { langName } from "../lib/langs";
 import { createLatestGuard, debounce } from "../lib/latest";
+import { canSpeak, createPlayer } from "../lib/speech";
 
 const DEBOUNCE_MS = 400;
 
@@ -102,6 +103,11 @@ export function Popup() {
     sourceRef.setSelectionRange(end, end);
   };
 
+  const autosizeSource = () => {
+    sourceRef.style.height = "auto";
+    sourceRef.style.height = `${sourceRef.scrollHeight}px`;
+  };
+
   onMount(async () => {
     const initial = await commands.getConfig();
     setConfig(initial);
@@ -120,6 +126,7 @@ export function Popup() {
         setOpenMenu(null);
         setText(e.seed_text ?? "");
         setStatus("idle");
+        autosizeSource();
         applyHeight(measureCard(), false);
         // State and size are clean: ask Rust to reveal the window, then play
         // the enter animation on the first visible frame.
@@ -172,6 +179,7 @@ export function Popup() {
 
   const onInput = (value: string) => {
     setText(value);
+    autosizeSource();
     debounced.call(value);
   };
 
@@ -234,6 +242,31 @@ export function Popup() {
   });
 
   const canSwap = createMemo(() => src() !== "auto" || detected() !== null);
+
+  const [speaking, setSpeaking] = createSignal<"source" | "result" | null>(null);
+  const player = createPlayer();
+  onCleanup(() => player.stop());
+
+  const sourceSpeechLang = () => (src() !== "auto" ? src() : detected());
+
+  const speakPane = async (pane: "source" | "result") => {
+    if (speaking() === pane) {
+      player.stop();
+      setSpeaking(null);
+      return;
+    }
+    const value =
+      pane === "source" ? text().trim() : (result()?.translation.primary ?? "");
+    const lang = pane === "source" ? sourceSpeechLang() : tgt();
+    if (!canSpeak(value, lang)) return;
+    setSpeaking(pane);
+    try {
+      const mp3 = await commands.speak(value, lang!);
+      player.play(mp3, () => setSpeaking(null));
+    } catch {
+      setSpeaking(null);
+    }
+  };
 
   // Each menu omits the language selected on the other side, so from and to
   // can never end up equal.
@@ -360,17 +393,29 @@ export function Popup() {
         </div>
 
         <div class="divider" />
-        <textarea
-          ref={sourceRef}
-          class="source"
-          dir="auto"
-          rows="1"
-          spellcheck={false}
-          placeholder="Translate…"
-          value={text()}
-          onInput={(e) => onInput(e.currentTarget.value)}
-          onKeyDown={onSourceKeyDown}
-        />
+        <div class="source-row">
+          <textarea
+            ref={sourceRef}
+            class="source"
+            dir="auto"
+            rows="1"
+            spellcheck={false}
+            placeholder="Translate…"
+            value={text()}
+            onInput={(e) => onInput(e.currentTarget.value)}
+            onKeyDown={onSourceKeyDown}
+          />
+          <Show when={canSpeak(text(), sourceSpeechLang())}>
+            <button
+              class="speak-btn"
+              classList={{ active: speaking() === "source" }}
+              title="Listen"
+              onClick={() => void speakPane("source")}
+            >
+              <SpeakerIcon />
+            </button>
+          </Show>
+        </div>
 
         <Show when={status() !== "idle"}>
           <div class="divider" />
@@ -400,8 +445,27 @@ export function Popup() {
             <Match when={status() === "result" && result()}>
               {(r) => (
                 <>
-                  <div class="result" classList={{ "with-dict": hasDict() }} dir="auto">
-                    {r().translation.primary}
+                  <div class="result-row">
+                    <div
+                      class="result"
+                      classList={{
+                        "with-dict": hasDict(),
+                        long: r().translation.primary.length > 240,
+                      }}
+                      dir="auto"
+                    >
+                      {r().translation.primary}
+                    </div>
+                    <Show when={canSpeak(r().translation.primary, tgt())}>
+                      <button
+                        class="speak-btn"
+                        classList={{ active: speaking() === "result" }}
+                        title="Listen"
+                        onClick={() => void speakPane("result")}
+                      >
+                        <SpeakerIcon />
+                      </button>
+                    </Show>
                   </div>
                   <Show when={hasDict()}>
                     <div class="dict">
@@ -497,6 +561,15 @@ function PinIcon(props: { filled: boolean }) {
     >
       <path d="M9 4h6l-1 5 3 3v2H7v-2l3-3-1-5z" />
       <line x1="12" y1="17" x2="12" y2="21" fill="none" />
+    </svg>
+  );
+}
+
+function SpeakerIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M11 5 6 9H2v6h4l5 4V5z" />
+      <path d="M15.5 8.5a5 5 0 0 1 0 7" />
     </svg>
   );
 }

@@ -132,6 +132,17 @@ pub fn open_settings(app: AppHandle) {
     crate::settings::open(&app);
 }
 
+#[tauri::command]
+pub async fn speak(
+    state: State<'_, AppState>,
+    text: String,
+    lang: String,
+) -> Result<String, crate::types::ProviderError> {
+    use base64::Engine as _;
+    let bytes = crate::translate::tts::fetch_speech(state.http.clone(), &text, &lang).await?;
+    Ok(base64::engine::general_purpose::STANDARD.encode(bytes))
+}
+
 /// Settings "Test" button: run a one-word translation through the given
 /// provider/key combination without touching the saved config.
 #[tauri::command]

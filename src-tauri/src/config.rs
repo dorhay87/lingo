@@ -6,7 +6,7 @@ use tauri_plugin_autostart::ManagerExt as _;
 use tauri_plugin_store::StoreExt as _;
 
 use crate::hotkey;
-use crate::types::{Lang, ProviderKind, Theme};
+use crate::types::{langs_equal, Lang, ProviderKind, Theme};
 
 const STORE_FILE: &str = "config.json";
 const STORE_KEY: &str = "config";
@@ -17,6 +17,7 @@ pub struct Config {
     pub hotkey: String,
     pub provider: ProviderKind,
     pub api_keys: HashMap<ProviderKind, String>,
+    pub source_lang: Lang,
     pub target_lang: Lang,
     pub lang_preferences: Vec<Lang>,
     pub launch_at_startup: bool,
@@ -31,6 +32,7 @@ impl Default for Config {
             hotkey: "Ctrl+L".into(),
             provider: ProviderKind::GoogleFree,
             api_keys: HashMap::new(),
+            source_lang: "auto".into(),
             target_lang: "en".into(),
             lang_preferences: vec!["en".into(), "he".into(), "nl".into()],
             launch_at_startup: false,
@@ -85,6 +87,14 @@ pub fn validate(config: &Config) -> Result<(), ConfigError> {
         .map_err(|_| ConfigError::InvalidHotkey(config.hotkey.clone()))?;
     if config.target_lang.trim().is_empty() {
         return Err(ConfigError::Invalid("target language is empty".into()));
+    }
+    if config.source_lang.trim().is_empty() {
+        return Err(ConfigError::Invalid("source language is empty".into()));
+    }
+    if config.source_lang != "auto" && langs_equal(&config.source_lang, &config.target_lang) {
+        return Err(ConfigError::Invalid(
+            "source and target languages are the same".into(),
+        ));
     }
     if config.lang_preferences.is_empty() {
         return Err(ConfigError::Invalid(
@@ -279,6 +289,29 @@ mod tests {
         assert!(validate(&c).is_err());
         let c = config_with(|c| c.lang_preferences = vec!["en".into(), "EN".into()]);
         assert!(validate(&c).is_err());
+    }
+
+    #[test]
+    fn validate_rejects_source_equal_to_target() {
+        assert!(validate(&config_with(|c| c.source_lang = "en".into())).is_err());
+        assert!(validate(&config_with(|c| {
+            c.source_lang = "iw".into();
+            c.target_lang = "he".into();
+        }))
+        .is_err());
+        assert!(validate(&config_with(|c| c.source_lang = "auto".into())).is_ok());
+        assert!(validate(&config_with(|c| {
+            c.source_lang = "nl".into();
+            c.target_lang = "en".into();
+        }))
+        .is_ok());
+    }
+
+    #[test]
+    fn stored_config_without_source_lang_defaults_to_auto() {
+        // Configs persisted before the field existed must keep loading.
+        let c: Config = serde_json::from_value(json!({ "target_lang": "he" })).unwrap();
+        assert_eq!(c.source_lang, "auto");
     }
 
     #[test]

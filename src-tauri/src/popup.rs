@@ -66,7 +66,7 @@ pub fn show_at_cursor(app: &AppHandle, with_capture: bool) {
 
         let (src, tgt) = {
             let config = state.config.read().expect("config lock poisoned");
-            ("auto".to_string(), config.target_lang.clone())
+            (config.source_lang.clone(), config.target_lang.clone())
         };
         {
             let mut session = state.session.lock().expect("session lock poisoned");

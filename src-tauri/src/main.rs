@@ -121,6 +121,7 @@ fn main() {
             commands::open_settings,
             commands::test_provider,
             commands::pin_toggle,
+            commands::speak,
         ])
         .setup(|app| {
             let config = config::load(app.handle());

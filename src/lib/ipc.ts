@@ -13,6 +13,7 @@ export interface Config {
   hotkey: string;
   provider: ProviderKind;
   api_keys: Partial<Record<ProviderKind, string>>;
+  source_lang: Lang;
   target_lang: Lang;
   lang_preferences: Lang[];
   launch_at_startup: boolean;
@@ -83,6 +84,8 @@ export const commands = {
   resizePopup: (height: number) => invoke<void>("resize_popup", { height }),
   testProvider: (provider: ProviderKind, apiKey: string) =>
     invoke<void>("test_provider", { provider, apiKey }),
+  speak: (text: string, lang: Lang) =>
+    invoke<string>("speak", { text, lang }),
 };
 
 /** Error shape thrown by update_config when a hotkey is already taken. */

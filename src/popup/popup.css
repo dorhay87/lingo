@@ -5,6 +5,10 @@ html,
 body {
   background: transparent;
   overflow: hidden;
+  /* The body's clip box must follow the window, not the card: an open
+     language menu extends past the card and would otherwise be clipped at
+     the body's content height no matter how big the window grows. */
+  height: 100%;
 }
 
 .halo {
@@ -130,9 +134,15 @@ body {
 
 /* ---- source pane ---- */
 
+.source-row {
+  display: flex;
+  align-items: flex-start;
+}
+
 .source {
   display: block;
-  width: 100%;
+  flex: 1;
+  min-width: 0;
   padding: 11px 14px 12px;
   border: none;
   background: none;
@@ -154,6 +164,33 @@ body {
 
 /* ---- result pane ---- */
 
+.result-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.result-row .result {
+  flex: 1;
+  min-width: 0;
+}
+
+.speak-btn {
+  border: none;
+  background: none;
+  color: var(--text-faint);
+  cursor: pointer;
+  display: inline-flex;
+  padding: 13px 12px 0 4px;
+}
+
+.speak-btn:hover {
+  color: var(--text-secondary);
+}
+
+.speak-btn.active {
+  color: var(--accent);
+}
+
 .result {
   padding: 12px 14px 13px;
   font-size: 18px;
@@ -161,6 +198,16 @@ body {
   color: var(--text-result);
   user-select: text;
   cursor: text;
+  /* Long passages scroll inside the pane instead of blowing the card past
+     its 450px cap and getting cut. */
+  max-height: 230px;
+  overflow-y: auto;
+}
+
+/* Long passages read better one step smaller, like Google's step-down. */
+.result.long {
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 .result.with-dict {

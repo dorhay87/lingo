@@ -18,6 +18,7 @@ import {
   type UnlistenFn,
 } from "../lib/ipc";
 import { comboFromEvent } from "../lib/hotkey";
+import { srcOptions, tgtOptions } from "../lib/langOptions";
 import { LANG_LIST, langName } from "../lib/langs";
 
 const ACCENT_PRESETS = ["#4F46E5", "#0F9D8C", "#2E8B57", "#C2410C", "#9333EA"];
@@ -192,6 +193,21 @@ function LanguagesSection(props: {
       <div class="section-title">Languages</div>
       <div class="panel">
         <div class="row">
+          <span class="row-label">Default source language</span>
+          <select
+            class="select"
+            value={props.config.source_lang}
+            onChange={(e) =>
+              void props.patch({ source_lang: e.currentTarget.value })
+            }
+          >
+            <For each={srcOptions(prefs(), props.config.target_lang)}>
+              {(code) => <option value={code}>{langName(code)}</option>}
+            </For>
+          </select>
+        </div>
+        <div class="divider" />
+        <div class="row">
           <span class="row-label">Default target language</span>
           <select
             class="select"
@@ -200,7 +216,7 @@ function LanguagesSection(props: {
               void props.patch({ target_lang: e.currentTarget.value })
             }
           >
-            <For each={prefs()}>
+            <For each={tgtOptions(prefs(), props.config.source_lang)}>
               {(code) => <option value={code}>{langName(code)}</option>}
             </For>
           </select>
